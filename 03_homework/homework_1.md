@@ -1,4 +1,5 @@
 # Homework 1: farmersmarket.db
+![homework1](https://github.com/luizpveo/sql/assets/57971038/ddf045f5-f831-4d15-aafb-33e4f3744d62)
 
 - Due on Thursday, May 16 at 11:59pm
 - Weight: 8% of total grade
