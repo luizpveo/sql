@@ -39,7 +39,28 @@ Think a bit about the row counts: how many distinct vendors, product names are t
 How many customers are there (y). 
 Before your final group by you should have the product of those two queries (x*y).  */
 
+SELECT 
+	vendor_name,
+	product_name,
+	original_price * 5 * number_of_customers as earning_per_product 
+FROM (
+	SELECT DISTINCT 
+		vendor_id,
+		product_id,
+		original_price,
+		number_of_customers
+	FROM
+		vendor_inventory as vi
+	CROSS JOIN (
+		SELECT 
+		count(DISTINCT (customer_id)) AS number_of_customers
+		FROM customer ) as nc
+) as a
 
+INNER JOIN product as p
+ON a.product_id = p.product_id
+INNER JOIN vendor as v
+ON v.vendor_id = a.vendor_id;
 
 -- INSERT
 /*1.  Create a new table "product_units". 
@@ -47,18 +68,43 @@ This table will contain only products where the `product_qty_type = 'unit'`.
 It should use all of the columns from the product table, as well as a new column for the `CURRENT_TIMESTAMP`.  
 Name the timestamp column `snapshot_timestamp`. */
 
-
+DROP TABLE IF EXISTS product_units;
+CREATE TABLE product_units as
+select *
+	,CURRENT_TIMESTAMP as snapshot_timestamp
+from product
+where product_qty_type = 'unit'
+--SELECT * from product_units
 
 /*2. Using `INSERT`, add a new row to the product_units table (with an updated timestamp). 
 This can be any product you desire (e.g. add another record for Apple Pie). */
 
-
+--Inserting a new record for Apple Pie
+INSERT INTO product_units
+VALUES(
+	(SELECT product_id FROM product WHERE lower(product_name) = 'apple pie'),
+	'Apple Pie',
+	'10"',
+	(SELECT product_category_id FROM product_category WHERE lower(product_category_name) = 'packaged prepared food'),
+	'unit',
+	CURRENT_TIMESTAMP
+	);	
+--SELECT * from product_units
+--SELECT * from product_units where product_name = 'Apple Pie'
 
 -- DELETE
 /* 1. Delete the older record for the whatever product you added. 
 
 HINT: If you don't specify a WHERE clause, you are going to have a bad time.*/
 
+DELETE from product_units
+WHERE product_name = 'Apple Pie'
+	AND snapshot_timestamp = (
+		SELECT MIN(snapshot_timestamp)
+		FROM product_units
+		WHERE product_name = 'Apple Pie');
+--SELECT * from product_units
+--SELECT * from product_units where product_name = 'Apple Pie'
 
 
 -- UPDATE
@@ -78,4 +124,15 @@ Finally, make sure you have a WHERE statement to update the right row,
 	you'll need to use product_units.product_id to refer to the correct row within the product_units table. 
 When you have all of these components, you can run the update statement. */
 
+ALTER TABLE product_units
+ADD current_quantity INT;
+--SELECT * from product_units
 
+UPDATE product_units as pu 
+SET current_quantity = coalesce(
+	(SELECT vi.quantity
+		FROM vendor_inventory as vi
+		WHERE vi.product_id = pu.product_id
+		order by vi.market_date DESC
+		Limit 1),0);
+--SELECT * from product_units
